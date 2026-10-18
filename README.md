@@ -2,8 +2,6 @@
 
 A production-ready AI assistant that translates natural language questions into SQL/MongoDB queries with explanations. Built with FastAPI and OpenAI's LLMs.
 
-![Database Query Assistant](https://example.com/your-demo-gif.gif) *(Replace with actual demo image)*
-
 ## Key Features
 
 - **Natural Language Interface**  
@@ -12,6 +10,8 @@ A production-ready AI assistant that translates natural language questions into 
   Works with both PostgreSQL (SQL) and MongoDB (NoSQL)
 - **Explainable AI**  
   Returns human-readable explanations with every query
+- **Read-Only by Design**  
+  Generated queries are validated as SELECT-only and run in a read-only session; write operations are rejected
 - **Schema-Aware**  
   Understands your database structure for precise queries
 - **Production Ready**  
@@ -37,10 +37,10 @@ llm_query_assistant/
 │   ├── main.py            # FastAPI app and endpoints
 │   ├── config.py          # Configuration (env vars, DB URIs, API keys)
 │   ├── models.py          # Pydantic models for request/response
-│   ├── llm.py             # LLM integration (OpenAI/HuggingFace)
+│   ├── llm.py             # LLM integration (OpenAI)
 │   ├── db_router.py       # Query routing and execution (Postgres/Mongo)
 │   ├── schema_utils.py    # Schema extraction for Postgres/Mongo
-│   └── utils.py           # (Optional) Helper functions/utilities
+│   └── query_guard.py     # Read-only checks for generated SQL/MongoDB queries
 ├── requirements.txt       # Python dependencies
 ├── Dockerfile             # Docker container definition
 ├── README.md              # Project overview and instructions
@@ -57,7 +57,7 @@ llm_query_assistant/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-repo/llm-query-assistant.git
+   git clone https://github.com/lesmot/llm-query-assistant.git
    cd llm-query-assistant
 
 2. **Set up environment variables**
@@ -72,7 +72,7 @@ llm_query_assistant/
 4. **Or run locally**  
    ```bash
     pip install -r requirements.txt
-    uvicorn main:app --reload
+    uvicorn app.main:app --reload
 
 ## License
 
