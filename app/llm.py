@@ -1,7 +1,10 @@
-import openai
-from .config import OPENAI_API_KEY
+import json
 
-openai.api_key = OPENAI_API_KEY
+from openai import OpenAI
+
+from .config import OPENAI_API_KEY, OPENAI_MODEL
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 def generate_query_and_explanation(question, schema, db_type):
     prompt = f"""
@@ -9,21 +12,22 @@ You are a database expert. Given the following schema:
 {schema}
 User question: "{question}"
 Database type: {db_type}
-Generate the appropriate query (SQL for Postgres, JSON for MongoDB), and explain your reasoning.
+Generate a read-only query that answers the question (a single SELECT statement for Postgres,
+or JSON for MongoDB with keys "collection" and either "find" or "aggregate"), and explain your reasoning.
 Respond in JSON with keys: query, explanation.
 """
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-        max_tokens=512,
-    )
-    import json
-    # Try to extract JSON from the response
     try:
-        content = response.choices[0].message.content
-        start = content.find('{')
-        end = content.rfind('}') + 1
-        return json.loads(content[start:end])
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=512,
+            response_format={"type": "json_object"},
+        )
+        result = json.loads(response.choices[0].message.content)
+        # MongoDB queries may come back as a JSON object rather than a string
+        if not isinstance(result.get("query"), str):
+            result["query"] = json.dumps(result.get("query"))
+        return result
     except Exception as e:
         return {"query": "", "explanation": f"LLM error: {e}"}
