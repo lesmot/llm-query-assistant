@@ -3,6 +3,7 @@ from .models import QueryRequest, QueryResponse
 from .llm import generate_query_and_explanation
 from .schema_utils import get_postgres_schema, get_mongo_schema
 from .db_router import execute_postgres_query, execute_mongo_query
+from .query_guard import UnsafeQueryError
 
 app = FastAPI()
 
@@ -30,6 +31,8 @@ def ask(request: QueryRequest):
         else:
             import json
             results, columns = execute_mongo_query(request.db_name, json.loads(query))
+    except UnsafeQueryError as e:
+        raise HTTPException(status_code=400, detail=f"Rejected query: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query execution error: {e}")
 
