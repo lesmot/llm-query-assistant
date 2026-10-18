@@ -1,4 +1,5 @@
 import psycopg2
+from bson import ObjectId
 from pymongo import MongoClient
 from .config import POSTGRES_URI, MONGO_URI
 from .query_guard import check_sql_is_read_only, check_mongo_is_read_only
@@ -19,6 +20,16 @@ def execute_postgres_query(query):
         conn.close()
     return results, columns
 
+def _stringify_object_ids(value):
+    # ObjectId isn't JSON-serializable, so FastAPI fails to return raw Mongo documents
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _stringify_object_ids(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_stringify_object_ids(v) for v in value]
+    return value
+
 def execute_mongo_query(db_name, query_json):
     check_mongo_is_read_only(query_json)
     client = MongoClient(MONGO_URI)
@@ -29,6 +40,6 @@ def execute_mongo_query(db_name, query_json):
         cursor = db[collection].aggregate(query_json["aggregate"])
     else:
         cursor = db[collection].find(query_json.get("find", {}))
-    results = list(cursor)
+    results = [_stringify_object_ids(doc) for doc in cursor]
     columns = list(results[0].keys()) if results else []
     return results, columns
